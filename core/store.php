@@ -125,7 +125,7 @@ class core_store{
 			$queryStr .=  $this->whereStr;//这里需要禁用全表更新
 		}else if($type == 'save'){
 			foreach($data as $k => $v){
-				
+
 			}
 		}else if($type == 'delete'){
 			if(empty($this->whereStr)){
@@ -136,15 +136,15 @@ class core_store{
 		$this->queryStr = $queryStr.';';
 	}
 
-	public function find(){
-		$res = $this->select();
+	public function find($forceMaster = false){
+		$res = $this->select($forceMaster);
 		return current($res);
 	}
 
-	public function select(){
+	public function select($forceMaster = false){
 		$dbInstance = $this->getDbLink();
 		$queryStr = $this->getQueryStr('select');
-		return $dbInstance->query($this->queryStr);
+		return $dbInstance->query($this->queryStr,$forceMaster);
 	}
 
 	public function update($data){
