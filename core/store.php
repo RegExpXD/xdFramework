@@ -22,7 +22,7 @@ class core_store{
 
 	private $limitStr;
 
-	public function __construct($tableName,$databaseName = DEFAULT_DATABASE){
+	public function __construct($tableName = null,$databaseName = DEFAULT_DATABASE){
 		$class = get_called_class();
 		if(!empty($tableName) && !empty($databaseName)){
 			$this->tableName = $tableName;
@@ -101,14 +101,14 @@ class core_store{
 	}
 
 	public function limit($limitStr){
-		$this->limitStr = ' LIMIT '.$orderStr;
+		$this->limitStr = ' LIMIT '.$limitStr;
 		return $this;
 	}
 
-	private function getQueryStr($type,$data){
+	private function getQueryStr($type,$data = null){
 		$queryStr = '';
 		if($type == 'select'){
-			$queryStr = 'SELECT '.$this->fieldStr.' FROM '.($this->joinStr?$this->joinStr:$this->tableName). ' WHERE '.$this->whereStr;
+			$queryStr = 'SELECT '.($this->fieldStr?$this->fieldStr:'*').' FROM '.($this->joinStr?$this->joinStr:"`{$this->tableName}`").$this->whereStr;
 			!empty($this->groupStr) && $queryStr .= $this->groupStr;
 			!empty($this->havingStr) && $queryStr .= $this->havingStr;
 			!empty($this->orderStr) && $queryStr .= $this->orderStr;
@@ -124,16 +124,24 @@ class core_store{
 			}
 			$queryStr .=  $this->whereStr;//这里需要禁用全表更新
 		}else if($type == 'save'){
-			foreach($data as $k => $v){
+		    if(is_array(current($data))){//二维数组，插入多条
+                foreach($data as $k => $v){
 
-			}
+                }
+            }else{
+                $queryStr = 'INSERT INTO '.$this->tableName.' SET ';
+		        foreach($data as $k => $v){
+		            $queryStr .= '`'.$k.'` = '.$v.',';
+                }
+                $queryStr = rtrim($queryStr,',');
+            }
 		}else if($type == 'delete'){
 			if(empty($this->whereStr)){
 				throw new Exception('delete operate need where,but it is empty now!');
 			}
 			$queryStr .=  $this->whereStr;//这里需要禁用全表更新
 		}
-		$this->queryStr = $queryStr.';';
+		return $queryStr.';';
 	}
 
 	public function find($forceMaster = false){
@@ -143,25 +151,25 @@ class core_store{
 
 	public function select($forceMaster = false){
 		$dbInstance = $this->getDbLink();
-		$queryStr = $this->getQueryStr('select');
+        $this->queryStr = $this->getQueryStr('select');
 		return $dbInstance->query($this->queryStr,$forceMaster);
 	}
 
 	public function update($data){
 		$dbInstance = $this->getDbLink();
-		$queryStr = $this->getQueryStr('update');
+        $this->queryStr = $this->getQueryStr('update',$data);
 		return $dbInstance->query($this->queryStr);
 	}
 
 	public function save($data){
 		$dbInstance = $this->getDbLink();
-		$queryStr = $this->getQueryStr('save');
+        $this->queryStr = $this->getQueryStr('save',$data);
 		return $dbInstance->query($this->queryStr);
 	}
 
 	public function delete(){
 		$dbInstance = $this->getDbLink();
-		$queryStr = $this->getQueryStr('delete');
+        $this->queryStr = $this->getQueryStr('delete');
 		return $dbInstance->query($this->queryStr);
 	}
 

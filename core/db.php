@@ -17,9 +17,9 @@ class core_db{
 
 	private static $instance = null;
 
-	private static $sqlStr;
+	private static $sqlStr = '';
 
-	private static $sqlErrorStr;
+	private static $sqlErrorStr = '';
 
 
 	public function instance($databaseName){
@@ -42,7 +42,7 @@ class core_db{
 		if(isset(self::$linkList[$this->databaseName]['master']) && is_resource(self::$linkList[$this->databaseName]['master'])){
 			return self::$linkList[$this->databaseName]['master'];
 		}
-		$this->getConnect(current($this->masterConf),'master');
+		return $this->getConnect(current($this->masterConf),'master');
 	}
 	//获取从库连接
 	private function getSlaveLink(){
@@ -64,10 +64,10 @@ class core_db{
 				$totalWeight -= $v['weight'];
 			}
 		}
-		$this->getConnect($configArr,'slave');
+		return $this->getConnect($configArr,'slave');
 	}
 	//mysql连接
-	public function getConnect($cofig,$dbType){
+	public function getConnect($config,$dbType){
 		$host = $config['host']?$config['host']:'localhost';
 		$port = $config['port']?$config['port']:'3306';
 		$user = $config['user']?$config['user']:'root';
@@ -80,39 +80,42 @@ class core_db{
 		}
 		mysqli_set_charset($conn,$charset);
 		self::$linkList[$this->databaseName][$dbType] = $conn;
+		return $conn;
 	}
 	//执行sql语句
 	public function query($queryStr,$forceMaster = false){
 		$startTime = $this->getMicroTime();
-		if(($isSelect = strncasecmp($queryStr, 'select', 6)) && !$forceMaster){//走从库
+		if(($isSelect = (!strncasecmp($queryStr, 'select', 6))) && !$forceMaster){//走从库
 			$this->currentLink = $this->getSlaveLink();
 		}else{//走主库
 			$this->currentLink = $this->getMasterLink();
 		}
 
-		$queryStrEscape = mysqli_real_escape_string($queryStr);
+		$queryStrEscape = mysqli_real_escape_string($this->currentLink,$queryStr);
 		$queryRes = mysqli_query($this->currentLink,$queryStrEscape);
+
 		if(!$queryRes){
 			$errMesg = mysqli_error($this->currentLink);
-			self::$sqlErrorStr .= $errMesg;
 			error_log($queryStrEscape.'|'.$errMesg,'/var/php/sqlLog/'.date('Y-m-d H:i:s').'.log');
 			// throw new Exception();
 		}
 		if(DEBUG){
+            $errMesg && self::$sqlErrorStr .= $errMesg;
 			$endTime = $this->getMicroTime();
-			self::$sqlStr .= $queryStr."\n".'|'.$endTime - $startTime."\n";
+			self::$sqlStr .= $queryStr."\n".'|'.(float)((float)$endTime - (float)$startTime)."\n";
 		}
 		//根据sql语句返回执行结果
 		if($isSelect){
-			while($row = $this->fetchAssoc()){
+			while($row = $this->fetchAssoc($queryRes)){
 			    $rows[] = $row;
 			}
+			mysqli_free_result($queryRes);//释放结果集
 			return $rows;
-		}else if(strncasecmp($queryStr, 'update', 6)){
+		}else if(!strncasecmp($queryStr, 'update', 6)){
 			return $this->getAffectRows();
-		}else if(strncasecmp($queryStr, 'insert', 6)){
+		}else if(!strncasecmp($queryStr, 'insert', 6)){
 			return $this->getInsertId();
-		}else if(strncasecmp($queryStr, 'delete', 6)){
+		}else if(!strncasecmp($queryStr, 'delete', 6)){
 			return $this->getAffectRows();
 		}
 	}
@@ -134,8 +137,8 @@ class core_db{
 		return mysqli_insert_id($this->currentLink);
 	}
 	//从返回结果中逐行获取关联数组数据
-	public function fetchAssoc(){
-		return mysqli_fetch_assoc($this->currentLink);
+	public function fetchAssoc($queryRes){
+		return mysqli_fetch_assoc($queryRes);
 	}
 	//从返回结果中逐行获取关联数组数据
 	public function fetchRow(){
