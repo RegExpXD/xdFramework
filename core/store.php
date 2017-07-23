@@ -47,37 +47,46 @@ class core_store{
 		$str = ' WHERE ';
 		if(is_array($args)){
 			foreach($args as $k => $v){
-				if(is_array($v)){
+			    if(strtoupper($k) == '_LOGISTIC_'){
+                    $str .= $v;
+                }else if(is_array($v)){
+			        $logic = isset($v['_logistic_'])?$v['_logistic_']:' AND ';
 					switch (strtoupper(current($v))) {
 						case 'IN':
-							$str .= '`'.$k.'` IN ('.implode($v,',').')';
+							$str .= '`'.$k.'` IN ("'.implode($v[1],'","').'")';
 							break;
 						case 'GT':
-							$str .= '`'.$k.'` > '.intval($v).'';
+							$str .= '`'.$k.'` > '.intval($v[1]).'';
 							break;
 						case 'LT':
-							$str .= '`'.$k.'` < '.intval($v).'';
+							$str .= '`'.$k.'` < '.intval($v[1]).'';
 							break;
 						case 'EQ':
-							$str .= '`'.$k.'` = '.intval($v).'';
+							$str .= '`'.$k.'` = '.intval($v[1]).'';
 							break;
 						case 'ELT':
-							$str .= '`'.$k.'` <= '.intval($v).'';
+							$str .= '`'.$k.'` <= '.intval($v[1]).'';
 							break;
 						case 'EGT':
-							$str .= '`'.$k.'` >= '.intval($v).'';
+							$str .= '`'.$k.'` >= '.intval($v[1]).'';
 							break;
 						case 'BETWEEN':
 							$str .= '`'.$k.'` BETWEEN '.$v[1][0].' AND '.$v[1][1];
-							break;	
-						default:
-							# code...
 							break;
+                        case 'LIKE':
+                            $str .= '`'.$k.'` LIKE "'.$v[1].'"';
+                            break;
+                        case 'NOT LIKE':
+                            $str .= '`'.$k.'` NOT LIKE "'.$v[1].'"';
+                            break;
 					}
+					$str .=  $logic;
 				}else{
 					$str .= ' `'.$k.'` = '.$v;
 				}
 			}
+            //去除尾部逻辑连接符号
+            $str = preg_replace('/(and|or|xor)\s*$/i','',$str);
 		}else{
 			$str = $args;
 		}
@@ -124,10 +133,16 @@ class core_store{
 			}
 			$queryStr .=  $this->whereStr;//这里需要禁用全表更新
 		}else if($type == 'save'){
-		    if(is_array(current($data))){//二维数组，插入多条
-                foreach($data as $k => $v){
+		    $firstElement = current($data);
+		    if(is_array($firstElement)){//二维数组，插入多条
+                $queryStr = 'INSERT INTO '.$this->tableName.' (`';
+                $fields = array_keys($firstElement);
+                $queryStr .= implode('`,`',$fields).'`) VALUES';
 
+                foreach($data as $k => $v){
+                    $queryStr .= '("'.implode('","',array_values($v)).'"),';
                 }
+                $queryStr = rtrim($queryStr,',');
             }else{
                 $queryStr = 'INSERT INTO '.$this->tableName.' SET ';
 		        foreach($data as $k => $v){
@@ -143,7 +158,6 @@ class core_store{
 		}
 		return $queryStr.';';
 	}
-
 	public function find($forceMaster = false){
 		$res = $this->select($forceMaster);
 		return current($res);

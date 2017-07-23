@@ -22,7 +22,7 @@ class core_db{
 	private static $sqlErrorStr = '';
 
 
-	public function instance($databaseName){
+	public static function instance($databaseName){
 		if(is_null(self::$instance)){
 			self::$instance = new self($databaseName);
 		}
@@ -91,21 +91,23 @@ class core_db{
 			$this->currentLink = $this->getMasterLink();
 		}
 
-		$queryStrEscape = mysqli_real_escape_string($this->currentLink,$queryStr);
-		$queryRes = mysqli_query($this->currentLink,$queryStrEscape);
-
+		$queryRes = mysqli_query($this->currentLink,$queryStr);
 		if(!$queryRes){
 			$errMesg = mysqli_error($this->currentLink);
-			error_log($queryStrEscape.'|'.$errMesg,'/var/php/sqlLog/'.date('Y-m-d H:i:s').'.log');
+			error_log($queryStr.'|'.$errMesg,0,'/var/php/sqlLog/'.date('Y-m-d H:i:s').'.log');
 			// throw new Exception();
 		}
 		if(DEBUG){
-            $errMesg && self::$sqlErrorStr .= $errMesg;
+            !empty($errMesg) && self::$sqlErrorStr .= $errMesg;
 			$endTime = $this->getMicroTime();
 			self::$sqlStr .= $queryStr."\n".'|'.(float)((float)$endTime - (float)$startTime)."\n";
 		}
+        if(!$queryRes){
+		    return false;//这里如果sql报错，直接返回false，交由程序员自己决定是否进行下面的步骤
+        }
 		//根据sql语句返回执行结果
-		if($isSelect){
+		if($isSelect || !strncasecmp($queryStr, 'desc', 4)){
+            $rows = array();
 			while($row = $this->fetchAssoc($queryRes)){
 			    $rows[] = $row;
 			}
@@ -117,7 +119,9 @@ class core_db{
 			return $this->getInsertId();
 		}else if(!strncasecmp($queryStr, 'delete', 6)){
 			return $this->getAffectRows();
-		}
+		}else if(!strncasecmp($queryStr, 'alter', 5)){
+
+        }
 	}
 	//打印sql
 	public static function sqlDebug(){

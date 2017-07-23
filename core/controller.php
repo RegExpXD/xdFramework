@@ -33,7 +33,7 @@ class core_controller{
 		return $_GET[$key];
 	}
 	//指定模板
-	public function _render(){
-
+	public function _render($fileName,$data = null,$module = SITE_CONT){
+        return core_template::render($fileName,$data,$module);
 	}
 }
