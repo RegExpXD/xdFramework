@@ -7,7 +7,7 @@ return array(
 				'port' => '3306',
 				'user' => 'root',
 				'db'   => 'test',
-				'passwd' => '123456',
+				'passwd' => 'root',
 				'charset' => 'utf8'
 				)
 			),
@@ -16,8 +16,8 @@ return array(
 				'host' => 'localhost',
 				'port' => '3306',
 				'user' => 'root',
-				'db'   => 'test',
-				'passwd' => '123456',
+				'db'   => 'slave',
+				'passwd' => 'root',
 				'charset' => 'utf8',
 				'weight' => 10
 				),
@@ -25,8 +25,8 @@ return array(
 				'host' => 'localhost',
 				'port' => '3306',
 				'user' => 'root',
-				'db'   => 'test',
-				'passwd' => '123456',
+				'db'   => 'slave',
+				'passwd' => 'root',
 				'charset' => 'utf8',
 				'weight' => 20
 				)

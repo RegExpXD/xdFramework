@@ -1,7 +1,7 @@
 <?php
 session_start();
 //site控制器名称
-define('SITE_CONT','index');
+define('SITE_CONT',end(explode('/',__DIR__)));
 
 require_once(dirname(__FILE__).'/../../config/base.cfg.php');
 
@@ -17,9 +17,10 @@ spl_autoload_register(array('core_autoload','autoload'));
 
 
 // echo E_NOTICE;exit;
-// echo error_reporting();exit;
+ini_set('display_errors','on');
+error_reporting(E_ALL);
 //自定义异常错误、处理
-if(DEBUG){
+if(!DEBUG){
 	$handlerObj = new core_handler();
 	set_error_handler(array($handlerObj,'errorHandler'),error_reporting());
 	set_exception_handler(array($handlerObj,'exceptionHandler'));
